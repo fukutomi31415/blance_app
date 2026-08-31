@@ -1,0 +1,744 @@
+ご指定の2点を反映した完全版コードです。
+主な変更点
+ * つり合い判定の範囲化: 各アイテムの正解範囲（ホッチキス：33〜37個、消しゴム：10〜14個、500円玉：5〜9個）を設定し、その範囲内であれば「これぐらいかな？」のメッセージと水平（0度）になる処理を組み込みました。
+ * 「やりなおし」ボタンの追加: 実験画面の操作ボタン群（-1, +1, +5, +10）の並びに、カウントを0に戻す「やりなおし」ボタンを追加しました。
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>おもさくらべ</title>
+  <style>
+    :root {
+      --bg-color: #fdf8eb;
+      --primary-color: #4cd137;
+      --accent-color: #ffbe76;
+      --text-color: #2f3542;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 12px;
+      background-color: #f4ece1;
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 560px;
+      background-color: var(--bg-color);
+      border: 8px solid #f0e2cf;
+      border-radius: 24px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      position: relative;
+    }
+
+    .header-title {
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #ff4757;
+      margin-bottom: 12px;
+      letter-spacing: 2px;
+    }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      min-height: 480px;
+    }
+
+    .active {
+      display: flex;
+    }
+
+    .btn {
+      background: linear-gradient(180deg, #4cd137 0%, #44bd32 100%);
+      color: white;
+      border: 3px solid #ffffff;
+      padding: 10px 24px;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #2ed573;
+      transition: transform 0.1s;
+      margin-top: 12px;
+    }
+
+    .btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #2ed573;
+    }
+
+    .btn-finish {
+      background: linear-gradient(180deg, #ff9f43 0%, #ee5253 100%);
+      box-shadow: 0 4px 0 #ff6b6b;
+    }
+
+    .prediction-box {
+      width: 100%;
+      background: #fff;
+      border: 3px dashed #f5cd79;
+      border-radius: 16px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .prediction-slots {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 12px;
+    }
+
+    .slot {
+      width: 30%;
+      height: 90px;
+      background: #f1f2f6;
+      border: 2px solid #ced6e0;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: bold;
+      position: relative;
+    }
+
+    .slot-rank {
+      position: absolute;
+      top: -10px;
+      left: 6px;
+      background: #ff7675;
+      color: white;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+    .item-select-grid {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .predict-item-card {
+      background: white;
+      border: 3px solid #e1b12c;
+      border-radius: 16px;
+      padding: 10px;
+      width: 30%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .predict-item-card.selected {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .item-grid {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .item-card {
+      background: white;
+      border: 3px solid #e1b12c;
+      border-radius: 18px;
+      padding: 10px;
+      width: 30%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    .item-icon { font-size: 36px; }
+    .item-name { font-size: 13px; font-weight: bold; margin: 4px 0; }
+
+    .status-badge {
+      font-size: 11px;
+      font-weight: bold;
+      padding: 3px 8px;
+      border-radius: 10px;
+      background-color: #718093;
+      color: white;
+      width: 100%;
+      text-align: center;
+    }
+
+    .status-badge.cleared { background-color: #00a8ff; }
+
+    .scale-wrapper {
+      width: 100%;
+      height: 200px;
+      position: relative;
+      margin-top: 6px;
+    }
+
+    .scale-base {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 24px;
+      height: 90px;
+      background: #cd8452;
+      border-radius: 4px;
+    }
+
+    .scale-foot {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 16px;
+      background: #b06939;
+      border-radius: 8px;
+    }
+
+    .scale-beam {
+      position: absolute;
+      top: 75px;
+      left: 50%;
+      width: 300px;
+      height: 12px;
+      background: #de9b60;
+      border-radius: 6px;
+      transform-origin: center center;
+      transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+      margin-left: -150px;
+    }
+
+    .scale-plate {
+      position: absolute;
+      top: 6px;
+      width: 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .plate-left { left: -10px; }
+    .plate-right { right: -10px; }
+
+    .string { width: 2px; height: 50px; background: #aaa; }
+
+    .dish {
+      width: 100px;
+      height: 20px;
+      background: #eccc68;
+      border: 2px solid #b5922f;
+      border-radius: 0 0 50px 50px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    .dish-items {
+      position: absolute;
+      bottom: 12px;
+      display: flex;
+      flex-wrap: wrap-reverse;
+      justify-content: center;
+      width: 90px;
+      max-height: 90px;
+      gap: 2px;
+    }
+
+    .ohajiki {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #ff7675, #d63031);
+    }
+
+    .display-panel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      margin: 6px 0;
+      background: #f1f2f6;
+      padding: 6px 14px;
+      border-radius: 16px;
+    }
+
+    .speech-bubble { font-size: 13px; font-weight: bold; }
+
+    .counter-box {
+      background: #2f3542;
+      color: #00ff88;
+      font-family: monospace;
+      font-size: 20px;
+      font-weight: bold;
+      padding: 2px 10px;
+      border-radius: 8px;
+    }
+
+    .control-buttons {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .btn-ohajiki-add {
+      background: white;
+      border: 2px solid #70a1ff;
+      border-radius: 12px;
+      padding: 4px 8px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .btn-ohajiki-reset {
+      background: #ffeaa7;
+      border: 2px solid #fdcb6e;
+    }
+
+    .btn-ohajiki-add .num { font-size: 14px; font-weight: bold; color: #1e90ff; }
+    .btn-ohajiki-reset .num { color: #d63031; }
+
+    .chart-container {
+      width: 100%;
+      height: 150px;
+      background: white;
+      border-radius: 16px;
+      padding: 10px;
+      border: 2px solid #f5cd79;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+
+    .chart-area {
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-end;
+      height: 100px;
+      border-bottom: 3px solid #718093;
+    }
+
+    .bar-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 60px;
+    }
+
+    .bar-val { font-weight: bold; font-size: 13px; margin-bottom: 2px; }
+
+    .bar {
+      width: 32px;
+      background: linear-gradient(180deg, #74b9ff 0%, #0984e3 100%);
+      border-radius: 6px 6px 0 0;
+      transition: height 0.4s ease;
+      height: 0px;
+    }
+
+    .bar-label { font-size: 11px; font-weight: bold; margin-top: 4px; }
+
+    .compare-container {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .compare-row {
+      background: white;
+      border-radius: 16px;
+      padding: 12px;
+      border: 2px solid #dfe4ea;
+    }
+
+    .compare-title { font-weight: bold; font-size: 14px; margin-bottom: 8px; }
+
+    .compare-list { display: flex; justify-content: space-around; }
+
+    .compare-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #f8f9fa;
+      padding: 6px;
+      border-radius: 10px;
+      width: 30%;
+    }
+
+    .result-banner {
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      padding: 8px 16px;
+      border-radius: 20px;
+      margin-bottom: 8px;
+      width: 100%;
+    }
+
+    .banner-correct { background: #ffeaa7; color: #d63031; border: 3px solid #ff7675; }
+    .banner-try { background: #81ecec; color: #008080; border: 3px solid #00cec9; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header-title">おもさくらべ</div>
+
+    <!-- 1. 予想画面 -->
+    <div id="predict-screen" class="screen active">
+      <div class="prediction-box">
+        <div style="font-size: 14px; font-weight: bold; color: #d63031;">おもい じゅん に よそう してみよう！</div>
+        <div class="prediction-slots">
+          <div class="slot"><div class="slot-rank">1</div><span id="p-slot-0">-</span></div>
+          <div class="slot"><div class="slot-rank">2</div><span id="p-slot-1">-</span></div>
+          <div class="slot"><div class="slot-rank">3</div><span id="p-slot-2">-</span></div>
+        </div>
+      </div>
+      <div class="item-select-grid" id="predict-item-grid"></div>
+      <button class="btn" style="padding: 4px 12px; font-size: 12px; margin-top: 8px;" onclick="resetPrediction()">やりなおす</button>
+      <button id="go-experiment-btn" class="btn" style="display: none; margin-top: 12px;" onclick="goToExperimentSelect()">くらべてみよう ➔</button>
+    </div>
+
+    <!-- 2. 実験選択画面 -->
+    <div id="select-screen" class="screen">
+      <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">はかる もの を えらんでね！</div>
+      <div class="item-grid" id="item-grid"></div>
+      <div class="chart-container">
+        <div style="font-size: 11px; font-weight: bold; color: #747d8c;">おはじきの かず</div>
+        <div class="chart-area" id="chart-area-select"></div>
+      </div>
+      <button id="result-btn" class="btn" style="display: none; margin-top: 12px;" onclick="showResultScreen()">けっか はっぴょう！ 🌟</button>
+    </div>
+
+    <!-- 3. 実験画面 -->
+    <div id="play-screen" class="screen">
+      <div class="scale-wrapper">
+        <div class="scale-base"></div>
+        <div class="scale-foot"></div>
+        <div class="scale-beam" id="scale-beam">
+          <div class="scale-plate plate-left">
+            <div class="string"></div>
+            <div class="dish"><div class="dish-items" id="left-dish-items"></div></div>
+          </div>
+          <div class="scale-plate plate-right">
+            <div class="string"></div>
+            <div class="dish"><div class="dish-items" id="right-dish-items"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="display-panel">
+        <div class="speech-bubble" id="speech-bubble">おはじきを のせよう！</div>
+        <div>
+          <span style="font-size: 10px; font-weight: bold; color: #747d8c;">おはじき</span>
+          <div class="counter-box"><span id="count-display">0</span> 個</div>
+        </div>
+      </div>
+
+      <div class="control-buttons">
+        <button class="btn-ohajiki-add btn-ohajiki-reset" onclick="resetCount()"><span class="num">リセット</span></button>
+        <button class="btn-ohajiki-add" onclick="addCount(-1)"><span class="num">-1</span></button>
+        <button class="btn-ohajiki-add" onclick="addCount(1)"><span class="num">+1</span></button>
+        <button class="btn-ohajiki-add" onclick="addCount(5)"><span class="num">+5</span></button>
+        <button class="btn-ohajiki-add" onclick="addCount(10)"><span class="num">+10</span></button>
+      </div>
+
+      <button class="btn btn-finish" style="margin-top: 8px; font-size: 15px; padding: 6px 20px;" onclick="confirmCount()">つりあった！（かくてい）</button>
+      <button id="next-btn" class="btn" style="display: none; margin-top: 8px;" onclick="backToSelect()">つぎへ ➔</button>
+
+      <div class="chart-container">
+        <div style="font-size: 11px; font-weight: bold; color: #747d8c;">おはじきの かず</div>
+        <div class="chart-area" id="chart-area-play"></div>
+      </div>
+    </div>
+
+    <!-- 4. 結果比較画面 -->
+    <div id="result-screen" class="screen">
+      <div id="result-banner" class="result-banner"></div>
+      <div class="compare-container">
+        <div class="compare-row">
+          <div class="compare-title">🤔 きみの よそう (おもい じゅん)</div>
+          <div class="compare-list" id="predicted-list"></div>
+        </div>
+        <div class="compare-row" style="border-color: #00b894;">
+          <div class="compare-title" style="color: #00b894;">⚖️ ほんとう の じゅんい</div>
+          <div class="compare-list" id="actual-list"></div>
+        </div>
+      </div>
+      <button class="btn" onclick="restartAll()">もういちど あそぶ 🔄</button>
+    </div>
+
+  </div>
+
+  <script>
+    const items = [
+      { id: 'stapler', name: 'ホッチキス', icon: '📌', minTarget: 33, maxTarget: 37, count: null },
+      { id: 'eraser', name: 'けしごむ', icon: '🧼', minTarget: 10, maxTarget: 14, count: null },
+      { id: 'coin', name: '500えんだま', icon: '🪙', minTarget: 5, maxTarget: 9, count: null }
+    ];
+
+    let userPrediction = [];
+    let currentItem = null;
+    let currentCount = 0;
+
+    function init() { renderPredictScreen(); }
+
+    function renderPredictScreen() {
+      const grid = document.getElementById('predict-item-grid');
+      grid.innerHTML = '';
+      items.forEach(item => {
+        const isSelected = userPrediction.includes(item);
+        const card = document.createElement('div');
+        card.className = `predict-item-card ${isSelected ? 'selected' : ''}`;
+        card.onclick = () => handlePredictionSelect(item);
+        card.innerHTML = `<div class="item-icon">${item.icon}</div><div class="item-name">${item.name}</div>`;
+        grid.appendChild(card);
+      });
+      updatePredictionSlots();
+    }
+
+    function handlePredictionSelect(item) {
+      if (userPrediction.length < 3 && !userPrediction.includes(item)) {
+        userPrediction.push(item);
+        renderPredictScreen();
+      }
+    }
+
+    function resetPrediction() { userPrediction = []; renderPredictScreen(); }
+
+    function updatePredictionSlots() {
+      for (let i = 0; i < 3; i++) {
+        const slotEl = document.getElementById(`p-slot-${i}`);
+        slotEl.innerText = userPrediction[i] ? `${userPrediction[i].icon} ${userPrediction[i].name}` : '-';
+      }
+      document.getElementById('go-experiment-btn').style.display = userPrediction.length === 3 ? 'block' : 'none';
+    }
+
+    function goToExperimentSelect() {
+      document.getElementById('predict-screen').classList.remove('active');
+      document.getElementById('select-screen').classList.add('active');
+      renderSelectScreen();
+      renderChart('chart-area-select');
+    }
+
+    function renderSelectScreen() {
+      const grid = document.getElementById('item-grid');
+      grid.innerHTML = '';
+      let allCleared = true;
+
+      items.forEach(item => {
+        if (item.count === null) allCleared = false;
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.onclick = () => startExperiment(item);
+        const badgeText = item.count !== null ? `${item.count} 個分` : 'まだ';
+        const badgeClass = item.count !== null ? 'status-badge cleared' : 'status-badge';
+        card.innerHTML = `<div class="item-icon">${item.icon}</div><div class="item-name">${item.name}</div><div class="${badgeClass}">${badgeText}</div>`;
+        grid.appendChild(card);
+      });
+
+      document.getElementById('result-btn').style.display = allCleared ? 'block' : 'none';
+    }
+
+    function renderChart(containerId) {
+      const chart = document.getElementById(containerId);
+      chart.innerHTML = '';
+      const maxVal = 40;
+
+      items.forEach(item => {
+        const group = document.createElement('div');
+        group.className = 'bar-group';
+        const val = item.count !== null ? item.count : 0;
+        const heightPx = (val / maxVal) * 80;
+        group.innerHTML = `
+          <div class="bar-val">${item.count !== null ? val : ''}</div>
+          <div class="bar" style="height: ${heightPx}px;"></div>
+          <div class="bar-label">${item.name}</div>
+        `;
+        chart.appendChild(group);
+      });
+    }
+
+    function startExperiment(item) {
+      currentItem = item;
+      currentCount = item.count !== null ? item.count : 0;
+
+      document.getElementById('select-screen').classList.remove('active');
+      document.getElementById('play-screen').classList.add('active');
+
+      document.getElementById('left-dish-items').innerHTML = `<span style="font-size: 36px;">${item.icon}</span>`;
+      document.getElementById('speech-bubble').innerText = `${item.name} と つりあうかな？`;
+      document.getElementById('next-btn').style.display = 'none';
+
+      renderChart('chart-area-play');
+      updateScale();
+    }
+
+    function addCount(val) {
+      currentCount = Math.max(0, currentCount + val);
+      updateScale();
+    }
+
+    function resetCount() {
+      currentCount = 0;
+      updateScale();
+    }
+
+    function updateScale() {
+      document.getElementById('count-display').innerText = currentCount;
+      const rightDish = document.getElementById('right-dish-items');
+      rightDish.innerHTML = '';
+      const displayMax = Math.min(currentCount, 25);
+      for (let i = 0; i < displayMax; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'ohajiki';
+        rightDish.appendChild(dot);
+      }
+
+      // --- 傾きの計算（正解範囲対応＆最大角度ストッパー付き） ---
+      const beam = document.getElementById('scale-beam');
+      const min = currentItem.minTarget;
+      const max = currentItem.maxTarget;
+      const mid = (min + max) / 2;
+      const maxAngle = 15; // 最大傾き角度（度）
+
+      let ratio = 0;
+      const bubble = document.getElementById('speech-bubble');
+
+      if (currentCount === 0) {
+        ratio = 1.0; // 一番左下がり
+        bubble.innerText = 'おはじきを のせよう！';
+      } else if (currentCount < min) {
+        // 足りない（左に傾く）
+        ratio = (min - currentCount) / min;
+        bubble.innerText = 'もっと のせてみよう！';
+      } else if (currentCount > max) {
+        // 超えている（右に傾く）
+        ratio = (max - currentCount) / mid;
+        bubble.innerText = 'おはじきの 方が おもいかも！';
+      } else {
+        // 範囲内（つり合い）
+        ratio = 0;
+        bubble.innerText = 'これぐらいかな？';
+      }
+
+      // -1.0 〜 +1.0 の間に制限（範囲を超えても最大角度で固定）
+      ratio = Math.max(-1, Math.min(1, ratio));
+
+      // 角度の適用（マイナスで左下がり、プラスで右下がり）
+      const angle = -ratio * maxAngle;
+      beam.style.transform = `rotate(${angle.toFixed(1)}deg)`;
+    }
+
+    function confirmCount() {
+      if (currentCount === 0) return;
+      currentItem.count = currentCount;
+      document.getElementById('speech-bubble').innerText = `つりあった！ ${currentItem.name} は おはじき${currentCount}個分！`;
+      renderChart('chart-area-play');
+      document.getElementById('next-btn').style.display = 'block';
+    }
+
+    function backToSelect() {
+      document.getElementById('play-screen').classList.remove('active');
+      document.getElementById('select-screen').classList.add('active');
+      renderSelectScreen();
+      renderChart('chart-area-select');
+    }
+
+    function showResultScreen() {
+      document.getElementById('select-screen').classList.remove('active');
+      document.getElementById('result-screen').classList.add('active');
+
+      const predList = document.getElementById('predicted-list');
+      predList.innerHTML = '';
+      userPrediction.forEach((item, idx) => {
+        predList.innerHTML += `
+          <div class="compare-item">
+            <span style="font-size:10px; color:#ff7675;">${idx+1}位</span>
+            <span style="font-size:24px;">${item.icon}</span>
+            <span style="font-size:11px; font-weight:bold;">${item.name}</span>
+          </div>
+        `;
+      });
+
+      const actualSorted = [...items].sort((a, b) => b.count - a.count);
+      const actualList = document.getElementById('actual-list');
+      actualList.innerHTML = '';
+      actualSorted.forEach((item, idx) => {
+        actualList.innerHTML += `
+          <div class="compare-item">
+            <span style="font-size:10px; color:#00b894;">${idx+1}位</span>
+            <span style="font-size:24px;">${item.icon}</span>
+            <span style="font-size:11px; font-weight:bold;">${item.name}</span>
+            <span style="font-size:10px; color:#747d8c;">${item.count}個</span>
+          </div>
+        `;
+      });
+
+      let isPerfect = true;
+      for (let i = 0; i < items.length; i++) {
+        if (userPrediction[i].id !== actualSorted[i].id) {
+          isPerfect = false;
+          break;
+        }
+      }
+
+      const banner = document.getElementById('result-banner');
+      if (isPerfect) {
+        banner.className = 'result-banner banner-correct';
+        banner.innerText = '✨ だいせいかい！ 🎉';
+      } else {
+        banner.className = 'result-banner banner-try';
+        banner.innerText = 'ナイスチャレンジ！ 👏';
+      }
+    }
+
+    function restartAll() {
+      items.forEach(i => i.count = null);
+      userPrediction = [];
+      document.getElementById('result-screen').classList.remove('active');
+      document.getElementById('predict-screen').classList.add('active');
+      renderPredictScreen();
+    }
+
+    init();
+  </script>
+</body>
+</html>
+
