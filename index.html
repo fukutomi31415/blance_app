@@ -27,7 +27,7 @@
       min-height: 100vh;
       overflow-x: hidden;
     }
-    /* 画面をワイド（最大960px）に変更 */
+    /* 画面ワイド設定 */
     .container {
       width: 100%;
       max-width: 960px;
@@ -50,7 +50,7 @@
       display: none;
       flex-direction: column;
       align-items: center;
-      min-height: 520px;
+      min-height: 580px;
     }
     .active {
       display: flex;
@@ -77,7 +77,7 @@
       box-shadow: 0 4px 0 #ff6b6b;
     }
     
-    /* 予想エリア（横1列に6つ配置） */
+    /* 予想エリア */
     .prediction-box {
       width: 100%;
       background: #fff;
@@ -124,7 +124,7 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     }
 
-    /* 予想カード選択エリア（横1列に6つ配置） */
+    /* 予想カード選択エリア */
     .item-select-grid {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
@@ -192,7 +192,7 @@
     }
     .status-badge.cleared { background-color: #00a8ff; }
 
-    /* アイコン表示スタイル (画像＋絵文字フォールバック) */
+    /* アイコン表示スタイル */
     .icon-wrapper {
       width: 48px;
       height: 48px;
@@ -345,29 +345,30 @@
     .btn-coin-add .num { font-size: 14px; font-weight: bold; color: #1e90ff; }
     .btn-coin-reset .num { color: #d63031; }
 
-    /* 棒グラフコンテナ */
+    /* 棒グラフコンテナ（縦長にゆとりを持たせる調整） */
     .chart-container {
       width: 100%;
       background: white;
       border-radius: 16px;
-      padding: 12px 16px;
+      padding: 16px 18px;
       border: 2px solid #f5cd79;
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
-      margin-top: 12px;
+      margin-top: 14px;
     }
     .chart-title {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: bold;
       color: #747d8c;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
+    /* 高さを 120px -> 220px に拡大 */
     .chart-area {
       display: flex;
       justify-content: space-around;
       align-items: flex-end;
-      height: 120px;
+      height: 220px;
       border-bottom: 3px solid #718093;
       padding-bottom: 2px;
     }
@@ -377,9 +378,9 @@
       align-items: center;
       flex: 1;
     }
-    .bar-val { font-weight: bold; font-size: 11px; margin-bottom: 2px; color: #2f3542; }
+    .bar-val { font-weight: bold; font-size: 12px; margin-bottom: 4px; color: #2f3542; }
     .bar {
-      width: 28px;
+      width: 32px;
       background: linear-gradient(180deg, #74b9ff 0%, #0984e3 100%);
       border-radius: 6px 6px 0 0;
       transition: height 0.4s ease;
@@ -388,7 +389,7 @@
     .bar-label { 
       font-size: 11px; 
       font-weight: bold; 
-      margin-top: 6px; 
+      margin-top: 8px; 
       text-align: center;
       display: flex;
       flex-direction: column;
@@ -401,7 +402,7 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
-      margin-top: 10px;
+      margin-top: 14px;
     }
     .compare-row {
       background: white;
@@ -451,7 +452,7 @@
   <div class="container">
     <div class="header-title">⚖️ おもさくらべ ⚖️</div>
 
-    <!-- 1. 予想画面（横1列に6枠） -->
+    <!-- 1. 予想画面 -->
     <div id="predict-screen" class="screen active">
       <div class="prediction-box">
         <div style="font-size: 15px; font-weight: bold; color: #d63031;">おもい じゅん に よそう してみよう！（1位〜6位）</div>
@@ -471,7 +472,7 @@
       </div>
     </div>
 
-    <!-- 2. れんしゅう画面 -->
+    <!-- 2. れんしゅう画面（左皿:1円玉, 右皿:対象物） -->
     <div id="practice-screen" class="screen">
       <div class="badge-practice">れんしゅう ページ</div>
       <div class="scale-wrapper">
@@ -518,7 +519,7 @@
       <button id="result-btn" class="btn" style="display: none; margin-top: 14px;" onclick="showResultScreen()">けっか はっぴょう！ 🌟</button>
     </div>
 
-    <!-- 4. 本番実験画面 -->
+    <!-- 4. 本番実験画面（左皿:1円玉, 右皿:対象物） -->
     <div id="play-screen" class="screen">
       <div class="scale-wrapper">
         <div class="scale-base"></div>
@@ -558,7 +559,7 @@
       </div>
     </div>
 
-    <!-- 5. 結果比較画面 (多い順の棒グラフを追加) -->
+    <!-- 5. 結果比較画面 -->
     <div id="result-screen" class="screen">
       <div id="result-banner" class="result-banner"></div>
 
@@ -583,7 +584,7 @@
   </div>
 
   <script>
-    // 対象物6種類の定義 (画像が見つからない場合は絵文字を表示)
+    // 対象物6種類の定義
     const items = [
       { id: 'hanky', name: 'はんかち', emoji: '🧣', img: 'はんかち.jpg', minTarget: 24, maxTarget: 28, count: null },
       { id: 'stapler', name: 'ホッチキス', emoji: '📎', img: 'ホッチキス.png', minTarget: 92, maxTarget: 96, count: null },
@@ -600,7 +601,7 @@
     let currentItem = null;
     let currentCount = 0;
 
-    // 画像描画ヘルパー（画像読込失敗時に絵文字フォールバック）
+    // 画像描画ヘルパー
     function renderIconHtml(item, size = 44) {
       return `
         <div class="icon-wrapper" style="width:${size}px; height:${size}px;">
@@ -651,12 +652,13 @@
       document.getElementById('go-practice-btn').style.display = userPrediction.length === 6 ? 'block' : 'none';
     }
 
-    // --- 2. れんしゅう画面 ---
+    // --- 2. れんしゅう画面（右側に対象物・左側に1円玉） ---
     function goToPractice() {
       document.getElementById('predict-screen').classList.remove('active');
       document.getElementById('practice-screen').classList.add('active');
       practiceItem.count = 0;
-      document.getElementById('p-left-dish-items').innerHTML = renderIconHtml(practiceItem, 48);
+      // 右皿に対象物を配置
+      document.getElementById('p-right-dish-items').innerHTML = renderIconHtml(practiceItem, 48);
       updatePracticeScale();
     }
 
@@ -667,14 +669,15 @@
 
     function updatePracticeScale() {
       document.getElementById('p-count-display').innerText = practiceItem.count;
-      const rightDish = document.getElementById('p-right-dish-items');
-      rightDish.innerHTML = '';
+      // 左皿に1円玉を配置
+      const leftDish = document.getElementById('p-left-dish-items');
+      leftDish.innerHTML = '';
       const displayMax = Math.min(practiceItem.count, 25);
       for (let i = 0; i < displayMax; i++) {
         const coin = document.createElement('div');
         coin.className = 'coin-1yen';
         coin.innerText = '1';
-        rightDish.appendChild(coin);
+        leftDish.appendChild(coin);
       }
 
       const beam = document.getElementById('p-scale-beam');
@@ -699,7 +702,8 @@
         bubble.innerText = 'これぐらいかな？つりあったよ！';
       }
       ratio = Math.max(-1, Math.min(1, ratio));
-      beam.style.transform = `rotate(${(-ratio * maxAngle).toFixed(1)}deg)`;
+      // 右皿が重い時（1円玉が少ない時）は正の角度（時計回り＝右下がり）
+      beam.style.transform = `rotate(${(ratio * maxAngle).toFixed(1)}deg)`;
     }
 
     function confirmPractice() {
@@ -727,7 +731,7 @@
       document.getElementById('result-btn').style.display = allCleared ? 'block' : 'none';
     }
 
-    // 棒グラフを描画する関数
+    // 棒グラフを描画する関数（ゆとりのある高さ170px計算）
     function renderChart(containerId, sortedItems = null) {
       const chart = document.getElementById(containerId);
       chart.innerHTML = '';
@@ -738,7 +742,8 @@
         const group = document.createElement('div');
         group.className = 'bar-group';
         const val = item.count !== null ? item.count : 0;
-        const heightPx = (val / maxVal) * 90;
+        // 高さを 170px まで拡大
+        const heightPx = (val / maxVal) * 170;
         group.innerHTML = `
           <div class="bar-val">${item.count !== null ? val : ''}</div>
           <div class="bar" style="height: ${heightPx}px;"></div>
@@ -751,13 +756,14 @@
       });
     }
 
-    // --- 4. 本番実験画面 ---
+    // --- 4. 本番実験画面（右側に対象物・左側に1円玉） ---
     function startExperiment(item) {
       currentItem = item;
       currentCount = item.count !== null ? item.count : 0;
       document.getElementById('select-screen').classList.remove('active');
       document.getElementById('play-screen').classList.add('active');
-      document.getElementById('left-dish-items').innerHTML = renderIconHtml(item, 48);
+      // 右皿に対象物を配置
+      document.getElementById('right-dish-items').innerHTML = renderIconHtml(item, 48);
       document.getElementById('speech-bubble').innerText = `${item.name} と つりあうかな？`;
       document.getElementById('next-btn').style.display = 'none';
       renderChart('chart-area-play');
@@ -776,14 +782,15 @@
 
     function updateScale() {
       document.getElementById('count-display').innerText = currentCount;
-      const rightDish = document.getElementById('right-dish-items');
-      rightDish.innerHTML = '';
+      // 左皿に1円玉を配置
+      const leftDish = document.getElementById('left-dish-items');
+      leftDish.innerHTML = '';
       const displayMax = Math.min(currentCount, 25);
       for (let i = 0; i < displayMax; i++) {
         const coin = document.createElement('div');
         coin.className = 'coin-1yen';
         coin.innerText = '1';
-        rightDish.appendChild(coin);
+        leftDish.appendChild(coin);
       }
 
       const beam = document.getElementById('scale-beam');
@@ -808,7 +815,8 @@
         bubble.innerText = 'これぐらいかな？';
       }
       ratio = Math.max(-1, Math.min(1, ratio));
-      beam.style.transform = `rotate(${(-ratio * maxAngle).toFixed(1)}deg)`;
+      // 右皿が重い時（1円玉が少ない時）は正の角度（時計回り＝右下がり）
+      beam.style.transform = `rotate(${(ratio * maxAngle).toFixed(1)}deg)`;
     }
 
     function confirmCount() {
@@ -826,7 +834,7 @@
       renderChart('chart-area-select');
     }
 
-    // --- 5. 結果画面 (多い順の棒グラフと全結果表示) ---
+    // --- 5. 結果画面 ---
     function showResultScreen() {
       document.getElementById('select-screen').classList.remove('active');
       document.getElementById('result-screen').classList.add('active');
